@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class VariationalAutoencoder(nn.Module):
 	"""
-	
+	Lightly based on https://github.com/bhpfelix/Variational-Autoencoder-PyTorch/blob/master/src/vanila_vae.py
 	Class to implement variational autoencoder
 	"""
 	def __init__(self, arg, latent_dim, use_dfc, input_channels=3):
@@ -57,11 +57,27 @@ class VariationalAutoencoder(nn.Module):
 
 		return self.fc_mu(x), self.fc_sig(x)
 
-	def forward(self):
+
+	def decode(self, z):
+		"""
+		Decode sampled latent vector and return image
+		"""
+		pass
+
+	def forward(self, x):
 		"""
 		Forward pass
 		"""
-		pass
+		# Encode the image
+		mu, log_var = self.encode(x)
+
+		# Reparameterize latent vector
+		z = self.reparameterize(mu, log_var)
+
+		# Decode sampled latent vector
+		out = self.Decode(z)
+
+		return out, mu, log_var
 
 	def reparameterize(self):
 		"""
