@@ -9,7 +9,9 @@ import torchvision
 import argparse
 import torch.optim as optim
 
-model = vae(latent_dim, use_dfc=False)
+device = torch.device("cuda" if args.cuda else "cpu")
+
+model = vae(latent_dim, use_dfc=False).to(device)
 
 dataloader = None
 opt = optim.Adam(model.parameters(), lr=lr)
