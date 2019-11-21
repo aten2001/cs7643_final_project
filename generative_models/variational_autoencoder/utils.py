@@ -7,8 +7,14 @@ import numpy as np
 def dfc_loss():
 	pass
 
-def KLD_loss():
-	pass
+def KLD_loss(mu, logvar):
+	"""
+	Calculate KL-divergence loss
+	"""
+	kld = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(logvar)
+	kld = torch.sum(kld).mul_(-0.5)
+
+	return kld
 
 def train_model(model, training_dataloader, optimizer, epochs):
 	pass
