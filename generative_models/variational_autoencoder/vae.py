@@ -79,11 +79,14 @@ class VariationalAutoencoder(nn.Module):
 
 		return out, mu, log_var
 
-	def reparameterize(self):
+	def reparameterize(self, mu, log_var):
 		"""
 		Perform reparam trick to preserve gradient
 		"""
-		pass
+		std_dev = torch.exp(0.5 * log_var)
+		eps = torch.randn_like(std_dev)
+
+		return mu + eps*std_dev
 
 
 	def calculate_latent_variable(self):
