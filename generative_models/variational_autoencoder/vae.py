@@ -32,6 +32,10 @@ class VariationalAutoencoder(nn.Module):
 		self.fc_mu = nn.Linear(128, self.latent_dim)
 		self.fc_sig = nn.Linear(128, self.latent_dim)
 
+		self.deconv1 = nn.ConvTranspose2d(input_channels=1, out_channels=32, kernel_size=3, stride=2)
+		self.deconv2 = nn.ConvTranspose2d(input_channels=32, out_channels=16, kernel_size=3, stride=2)
+		self.deconv3 = nn.ConvTranspose2d(input_channels=16, out_channels=3, kernel_size=3, stride=2)
+
 	def encode(self, x, leaky=False):
 		"""
 		Encode image
