@@ -16,11 +16,15 @@ class Discriminator(nn.Module):
 
         if (cnn_model == "vgg"):
             self.cnn = models.vgg16(pretrained=True).features
-            cnn_embedding_dim = 1024
+            cnn_embedding_dim = 25088
 
         elif (cnn_model == "resnet"):
             self.cnn = models.resnet(pretrained=True).features
             cnn_embedding_dim = 1024
+
+        self.fc1 = nn.Linear(cnn_embedding_dim, 512)
+        self.fc2 = nn.Linear(h_lstm, 256)
+        self.fc3 = nn.Linear(256, 1)
 
         #Activations
         self.relu = nn.ReLU()
@@ -28,11 +32,14 @@ class Discriminator(nn.Module):
 
         #LSTM
         self.LSTM = nn.LSTM(
-            input_size=cnn_embedding_dim,
+            input_size=512,
             hidden_size=h_lstm,        
             num_layers=lstm_layers,       
             batch_first=True,       # input & output will has batch size as 1s dimension. e.g. (batch, time_step, input_size)
         )
+
+        # Lock conv layers
+        self.cnn.eval()
 
     def forward(self, x):
         """
@@ -43,4 +50,19 @@ class Discriminator(nn.Module):
 
         #print (x.shape)
 
-        print (self.cnn(x).shape)
+        conv_feats = self.cnn(x).view(20,-1)
+        embedding = self.fc1(conv_feats)
+        embedding = self.relu(embedding)
+
+        hidden = None
+
+        for i in range(embedding.shape[0]):
+            #print (embedding[i].view(1, 1, -1).shape)
+            out, hidden = self.LSTM(embedding[i].view(1, 1, -1), hidden)
+            
+        out = self.fc2(out)
+        out = self.relu(out)
+        out = self.fc3(out)
+        out = torch.sigmoid(out)
+
+        return out
