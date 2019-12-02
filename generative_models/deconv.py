@@ -12,9 +12,11 @@ class Deconv(nn.Module):
     """
     def __init__(self):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
         super(Deconv, self).__init__()
-        self.linear_1 = nn.
+
+        self.lstm_1 = nn.LSTM(input_size=25, hidden_size=25, num_layers=2)
         self.unpool_1 = nn.Upsample(scale_factor=5, mode='bilinear')
         self.deconv_1 = nn.ConvTranspose2d(in_channels=1, out_channels=3, kernel_size=200, stride=1)
+
         # self.input_dim = input_dim
         # self.hidden_dim = hidden_dim
         # self.num_layers = num_layers
@@ -32,7 +34,9 @@ class Deconv(nn.Module):
         #                                     kernel_size=5)
 
     def forward(self, input_vec):
-        output = input_vec.view(1, 1, 5, 5)
+        output = input_vec
+        output, (_, _) = self.lstm_1(output)  # input of shape (seq_len, batch, input_size)
+        output = output.view(2, 1, 5, 5)
         output = self.unpool_1(output)
         output = self.deconv_1(output)
 
@@ -42,12 +46,13 @@ class Deconv(nn.Module):
 model = Deconv()
 criterion = F.mse_loss
 # criterion = F.binary_cross_entropy
-optimizer = optim.SGD(model.parameters(), lr=.02, momentum=0, weight_decay=0)
+optimizer = optim.SGD(model.parameters(), lr=.001, momentum=.2, weight_decay=0)
 
-tensor_1 = torch.ones(25)
+tensor_1 = torch.ones(1, 1, 25)
+tensor_1 = tensor_1.repeat(2, 1, 1)
 
 # Set values for DataSet object.
-seq_length = 1
+seq_length = 2
 class_limit = 1  # Number of classes to extract. Can be 1-101 or None for all.
 video_limit = 1  # Number of videos allowed per class.  None for no limit
 data = DataSet(seq_length=seq_length, class_limit=class_limit, video_limit=video_limit)

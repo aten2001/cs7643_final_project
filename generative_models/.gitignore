@@ -1,3 +1,7 @@
 data/*
 !data
+!data/ucfTrainTestlist/
+!data/1_move_files.py
+!data/2_extract_files.py
+!data/data_file.csv
 __pycache__/

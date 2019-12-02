@@ -13,3 +13,7 @@ Now you can run the scripts in the data folder to move the videos to the appropr
 `python 1_move_files.py`
 
 `python 2_extract_files.py`
+
+## Based on
+
+https://github.com/harvitronix/five-video-classification-methods
