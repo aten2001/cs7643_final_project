@@ -7,9 +7,9 @@ from torchvision import models
 import torch.nn as nn
 import numpy
 
-class Discriminator(nn.Module):
+class Encoder(nn.Module):
     def __init__(self, cnn_model, h_lstm, lstm_layers):
-        super(Discriminator, self).__init__()
+        super(Encoder, self).__init__()
 
         # Convolutions (pre-trained)
         cnn_embedding_dim = None

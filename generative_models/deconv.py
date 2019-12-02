@@ -43,42 +43,44 @@ class Deconv(nn.Module):
         return output
 
 
-model = Deconv()
-criterion = F.mse_loss
-# criterion = F.binary_cross_entropy
-optimizer = optim.SGD(model.parameters(), lr=.001, momentum=.2, weight_decay=0)
+if __name__ == "__main__":
 
-tensor_1 = torch.ones(1, 1, 25)
-tensor_1 = tensor_1.repeat(2, 1, 1)
+    model = Deconv()
+    criterion = F.mse_loss
+    # criterion = F.binary_cross_entropy
+    optimizer = optim.SGD(model.parameters(), lr=.001, momentum=.2, weight_decay=0)
 
-# Set values for DataSet object.
-seq_length = 2
-class_limit = 1  # Number of classes to extract. Can be 1-101 or None for all.
-video_limit = 1  # Number of videos allowed per class.  None for no limit
-data = DataSet(seq_length=seq_length, class_limit=class_limit, video_limit=video_limit)
+    tensor_1 = torch.ones(1, 1, 25)
+    tensor_1 = tensor_1.repeat(2, 1, 1)
 
-video_array = None
-for video in data.data:
-    video_array = data.video_to_vid_array(video)  # Get numpy array of sequence
-    break  # Only need one video to begin with.
+    # Set values for DataSet object.
+    seq_length = 2
+    class_limit = 1  # Number of classes to extract. Can be 1-101 or None for all.
+    video_limit = 1  # Number of videos allowed per class.  None for no limit
+    data = DataSet(seq_length=seq_length, class_limit=class_limit, video_limit=video_limit)
 
-video_tensor = torch.from_numpy(video_array).type(torch.float32)
+    video_array = None
+    for video in data.data:
+        video_array = data.video_to_vid_array(video)  # Get numpy array of sequence
+        break  # Only need one video to begin with.
 
-model.train()
-for index in range(200):
-    optimizer.zero_grad()
+    video_tensor = torch.from_numpy(video_array).type(torch.float32)
 
+    model.train()
+    for index in range(200):
+        optimizer.zero_grad()
+
+        output = model(tensor_1)
+        # print(video_tensor.dtype)
+        # print(output.dtype)
+        loss = criterion(output, video_tensor)
+        print("Step: {}, Loss: {}".format(index, loss))
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
     output = model(tensor_1)
-    # print(video_tensor.dtype)
-    # print(output.dtype)
-    loss = criterion(output, video_tensor)
-    print("Step: {}, Loss: {}".format(index, loss))
-    loss.backward()
-    optimizer.step()
-
-model.eval()
-output = model(tensor_1)
-array_video = output.detach().numpy()
-data.vid_array_to_video("test_me", array_video)
+    array_video = output.detach().numpy()
+    data.vid_array_to_video("test_me", array_video)
 
 
