@@ -33,12 +33,12 @@ class EncoderDecoder(nn.Module):
 
         return output
 
+
 # Check for cuda
 if torch.cuda.is_available():
     device = 'cuda'
-
 else:
-    device = cpu
+    device = 'cpu'
 
 torch.manual_seed(sys.argv[1])
 

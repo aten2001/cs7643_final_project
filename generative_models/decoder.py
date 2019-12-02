@@ -10,36 +10,25 @@ class Decoder(nn.Module):
     Decoder for the auto-encoder/decoder network
     ref https://zo7.github.io/blog/2016/09/25/generating-faces.html
     """
-    def __init__(self, sequence_length=1, batch_size=1):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
+    def __init__(self, sequence_length=1, batch_size=1, lstm_input_size=25, lstm_hidden_size=25, lstm_num_layers=2):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
         super(Decoder, self).__init__()
         self.sequence_length = sequence_length
         self.batch_size = batch_size
-        self.lstm_1 = nn.LSTM(input_size=25, hidden_size=25, num_layers=2)
+        self.lstm_1 = nn.LSTM(input_size=lstm_input_size, hidden_size=lstm_hidden_size, num_layers=lstm_num_layers,
+                              batch_first=True)
         self.unpool_1 = nn.Upsample(scale_factor=5, mode='bilinear')
         self.deconv_1 = nn.ConvTranspose2d(in_channels=1, out_channels=3, kernel_size=200, stride=1)
 
-        # self.input_dim = input_dim
-        # self.hidden_dim = hidden_dim
-        # self.num_layers = num_layers
-        # self.linear_out = linear_out
-        # # self.de_conv_stuff, \  TODO DO ME!!
-        # self.batch_size = batch_size
-        #
-        # self.lstm = nn.LSTM(input_size=z_dim,
-        #                     hidden_size=hidden_dim,
-        #                     num_layers=num_layers)  # TODO: Consider dropout
-        # self.linear = nn.Linear(in_features=hidden_dim,
-        #                         out_features=linear_out)
-        # self.de_conv_1 = nn.ConvTranspose2d(in_channels=linear_out,
-        #                                     out_channels=3,
-        #                                     kernel_size=5)
+        # TODO: Consider dropout
+
 
     def forward(self, input_vec):
         output = input_vec
-        output, (_, _) = self.lstm_1(output)  # input of shape (seq_len, batch, input_size)
-        output = output.view(self.sequence_length, self.batch_size, 5, 5)  # Desired shape (seq_len, batch_size, H, W)
-        output = self.unpool_1(output)  # (N, *batch_size, H_{in}, W_{in})   *B == C
-        output = self.deconv_1(output)  # (N, C_{in}, H_{in}, W_{in}) ->  (N, C_{out}, H_{out}, W_{out})
+        output, (_, _) = self.lstm_1(output)  # input of shape (batch, seq_len, input_size)
+        output = output.view(self.sequence_length * self.batch_size, 1, 5, 5)  # Desired shape (seq_len, batch_size, H, W)
+        output = self.unpool_1(output)  # (N*B, C, H_{in}, W_{in})    C
+        output = self.deconv_1(output)  # (N*B, C_{in}, H_{in}, W_{in}) ->  (N*B, C_{out}, H_{out}, W_{out})
+        output = output.view(self.batch_size, self.sequence_length, )
 
 
         return output
