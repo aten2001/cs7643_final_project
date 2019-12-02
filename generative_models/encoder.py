@@ -8,7 +8,7 @@ import torch.nn as nn
 import numpy
 
 class Encoder(nn.Module):
-    def __init__(self, cnn_model, h_lstm, lstm_layers):
+    def __init__(self, cnn_model, input_dim, hidden_dim, lstm_layers, embedding_dim):
         super(Encoder, self).__init__()
 
         # Convolutions (pre-trained)
@@ -22,9 +22,8 @@ class Encoder(nn.Module):
             self.cnn = models.resnet(pretrained=True).features
             cnn_embedding_dim = 1024
 
-        self.fc1 = nn.Linear(cnn_embedding_dim, 512)
-        self.fc2 = nn.Linear(h_lstm, 256)
-        self.fc3 = nn.Linear(256, 1)
+        self.fc1 = nn.Linear(cnn_embedding_dim, input_dim)
+        self.fc2 = nn.Linear(hidden_dim, embedding_dim)
 
         #Activations
         self.relu = nn.ReLU()
@@ -32,10 +31,10 @@ class Encoder(nn.Module):
 
         #LSTM
         self.LSTM = nn.LSTM(
-            input_size=512,
-            hidden_size=h_lstm,        
+            input_size=input_dim,
+            hidden_size=hidden_dim,        
             num_layers=lstm_layers,       
-            batch_first=True,       # input & output will has batch size as 1s dimension. e.g. (batch, time_step, input_size)
+            batch_first=True       # input & output will has batch size as 1s dimension. e.g. (batch, time_step, input_size)
         )
 
         # Lock conv layers
@@ -46,23 +45,18 @@ class Encoder(nn.Module):
         Unroll video tensor and pass through cnn feature extractor
         """
 
-        x = x.view(-1, 3, 250, 250)
+        x = x.view(-1, 3, 224, 224)
 
-        #print (x.shape)
-
-        conv_feats = self.cnn(x).view(20,-1)
+        conv_feats = self.cnn(x)
         embedding = self.fc1(conv_feats)
         embedding = self.relu(embedding)
 
         hidden = None
 
-        for i in range(embedding.shape[0]):
-            #print (embedding[i].view(1, 1, -1).shape)
-            out, hidden = self.LSTM(embedding[i].view(1, 1, -1), hidden)
+        # Initialize initial hidden state
+        out, hidden = self.LSTM(embedding[i].view(-1, 1, 1), hidden)
             
         out = self.fc2(out)
         out = self.relu(out)
-        out = self.fc3(out)
-        out = torch.sigmoid(out)
 
         return out
