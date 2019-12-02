@@ -33,7 +33,7 @@ def threadsafe_generator(func):
 
 class DataSet():
 
-    def __init__(self, seq_length=40, class_limit=None, video_limit=None, image_shape=(224, 224, 3)):
+    def __init__(self, seq_length=40, class_limit=None, video_limit=None, image_shape=(224, 224, 3), skip_rate=10):
         """Constructor.
         seq_length = (int) the number of frames to consider
         class_limit = (int) number of classes to limit the data to.
@@ -43,7 +43,10 @@ class DataSet():
         self.seq_length = seq_length
         self.class_limit = class_limit
         self.sequence_path = os.path.join('data', 'sequences')
-        self.max_frames = 300  # max number of frames a video can have for us to use it
+        # max_frames has no use for us
+        # self.max_frames = 300  # max number of frames a video can have for us to use it
+        self.image_shape = image_shape
+        self.skip_rate = skip_rate
         if video_limit is None:
             self.video_limit = np.Inf
         else:
@@ -59,7 +62,7 @@ class DataSet():
         # Now do some minor data cleaning.
         self.data = self.clean_data()
 
-        self.image_shape = image_shape
+
 
     @staticmethod
     def get_data():
@@ -76,7 +79,7 @@ class DataSet():
         data_clean = []
         self.class_count = {class_name: 0 for class_name in self.classes}
         for item in self.data:
-            if int(item[3]) >= self.seq_length and int(item[3]) <= self.max_frames \
+            if int(item[3]) >= self.seq_length * self.skip_rate \
                     and item[1] in self.classes and self.class_count[item[1]] < self.video_limit:
                 data_clean.append(item)
                 self.class_count[item[1]] += 1
@@ -300,18 +303,18 @@ class DataSet():
         parts = filename.split(os.path.sep)
         return parts[-1].replace('.jpg', '')
 
-    @staticmethod
-    def rescale_list(input_list, size):
+    # @staticmethod
+    def rescale_list(self, input_list, size):
         """Given a list and a size, return a rescaled/samples list. For example,
         if we want a list of size 5 and we have a list of size 25, return a new
         list of size five which is every 5th element of the origina list."""
         assert len(input_list) >= size
 
         # Get the number to skip between iterations.
-        skip = len(input_list) // size  # TODO: Make a better skip
+        # skip = len(input_list) // size  # TODO: Make a better skip
 
         # Build our new output.
-        output = [input_list[i] for i in range(0, len(input_list), skip)]
+        output = [input_list[i] for i in range(0, len(input_list), self.skip_rate)]
 
         # Cut off the last one if needed.
         return output[:size]
