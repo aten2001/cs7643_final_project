@@ -101,9 +101,14 @@ class DataSet():
             return classes
 
     def video_to_vid_array(self, input_video):
+        """
+
+        :param input_video:
+        :return: sequence: numpy array shape (sequence length, C, H, W)
+        """
         frames = self.get_frames_for_sample(input_video)  # Get the frames for this video.
         frames = self.rescale_list(frames, self.seq_length)  # Now downsample to just the ones we need.
-        sequence = np.zeros((self.seq_length, 3, self.image_shape[0], self.image_shape[1]))
+        sequence = np.zeros((self.seq_length, self.image_shape[2], self.image_shape[0], self.image_shape[1]))
         for index, frame in enumerate(frames):
             image_array = self.pic_to_pic_array(frame)
             image_array = np.expand_dims(image_array, 0)  # Add sequence dimension
