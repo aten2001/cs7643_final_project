@@ -4,8 +4,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 from data import DataSet
-from deconv import Deconv
 from encoder import Encoder
+from decoder_single import DecoderSingle
+
 
 class EncoderDecoder(nn.Module):
     """
@@ -15,8 +16,9 @@ class EncoderDecoder(nn.Module):
     def __init__(self):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
         super(EncoderDecoder, self).__init__()
 
-        self.encoder = Encoder(cnn_model="vgg", h_lstm=25, lstm_layers=1)
-        self.decoder = Deconv()
+        #cnn_model, input_dim, hidden_dim, lstm_layers, embedding_dim
+        self.encoder = Encoder(cnn_model="vgg", input_dim=512, hidden_dim=100, lstm_layers=1, embedding_dim=100)
+        self.decoder = DecoderSingle()
 
     def forward(self, x):
         """
@@ -26,6 +28,7 @@ class EncoderDecoder(nn.Module):
         """
 
         working = self.encoder.forward(x)
+        # working = working[-1]
         output = self.decoder.forward(working)
 
         return output
@@ -33,7 +36,7 @@ class EncoderDecoder(nn.Module):
 
 
 # Set values for DataSet object.
-seq_length = 2
+seq_length = 6
 class_limit = 1  # Number of classes to extract. Can be 1-101 or None for all.
 video_limit = 1  # Number of videos allowed per class.  None for no limit
 data = DataSet(seq_length=seq_length, class_limit=class_limit, video_limit=video_limit)
@@ -43,21 +46,29 @@ for video in data.data:
     video_array = data.video_to_vid_array(video)  # Get numpy array of sequence
     break  # Only need one video to begin with.
 
+data.vid_array_to_video("ground_truth", video_array)
+
 video_tensor = torch.from_numpy(video_array).type(torch.float32)
 
 model = EncoderDecoder()
 criterion = F.mse_loss
 # criterion = F.binary_cross_entropy
-optimizer = optim.SGD(model.parameters(), lr=.001, momentum=.2, weight_decay=0)
+optimizer = optim.Adam(model.parameters(), lr=.05, weight_decay=0)
+# optimizer = optim.SGD(model.parameters(), lr=.01, momentum=.2, weight_decay=0)
 
 model.train()
-for index in range(2):
+for index in range(150):
     optimizer.zero_grad()
 
     output = model.forward(video_tensor)
     # print(video_tensor.dtype)
     # print(output.dtype)
     loss = criterion(output, video_tensor)
+
+    frame_one = output[0].detach().numpy()
+
+    frame_one = np.transpose(frame_one, )
+
     print("Step: {}, Loss: {}".format(index, loss))
     loss.backward()
     optimizer.step()

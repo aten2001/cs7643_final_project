@@ -12,17 +12,17 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         # Convolutions (pre-trained)
-        cnn_embedding_dim = None
+        self.cnn_embedding_dim = None
 
         if (cnn_model == "vgg"):
             self.cnn = models.vgg16(pretrained=True).features
-            cnn_embedding_dim = 25088
+            self.cnn_embedding_dim = 25088
 
         elif (cnn_model == "resnet"):
             self.cnn = models.resnet(pretrained=True).features
-            cnn_embedding_dim = 1024
+            self.cnn_embedding_dim = 1024
 
-        self.fc1 = nn.Linear(cnn_embedding_dim, input_dim)
+        self.fc1 = nn.Linear(self.cnn_embedding_dim, input_dim)
         self.fc2 = nn.Linear(hidden_dim, embedding_dim)
 
         #Activations
@@ -47,14 +47,15 @@ class Encoder(nn.Module):
 
         x = x.view(-1, 3, 224, 224)
 
-        conv_feats = self.cnn(x)
+        conv_feats = self.cnn(x).view(-1, self.cnn_embedding_dim)
+        print ("em", conv_feats.shape)
         embedding = self.fc1(conv_feats)
         embedding = self.relu(embedding)
 
         hidden = None
 
         # Initialize initial hidden state
-        out, hidden = self.LSTM(embedding[i].view(-1, 1, 1), hidden)
+        out, hidden = self.LSTM(embedding.view(1, 6, -1), hidden)
             
         out = self.fc2(out)
         out = self.relu(out)
