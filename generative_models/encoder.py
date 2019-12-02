@@ -48,7 +48,6 @@ class Encoder(nn.Module):
         x = x.view(-1, 3, 224, 224)
 
         conv_feats = self.cnn(x).view(-1, self.cnn_embedding_dim)
-        print ("em", conv_feats.shape)
         embedding = self.fc1(conv_feats)
         embedding = self.relu(embedding)
 
