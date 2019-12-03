@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 from data import DataSet
-from encoder import Encoder
+from encoder_single import Encoder
 from decoder_single import DecoderSingle
 import sys
 
