@@ -10,17 +10,34 @@ class DecoderSingle(nn.Module):
     Decoder for the auto-encoder/decoder network
     ref https://zo7.github.io/blog/2016/09/25/generating-faces.html
     """
-    def __init__(self):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
+    def __init__(self, input_size, sequence_len):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
         super(DecoderSingle, self).__init__()
 
-        self.lstm_1 = nn.LSTM(input_size=100, hidden_size=100, num_layers=2, batch_first=True)
+        self.lstm_1 = nn.LSTM(input_size=input_size, hidden_size=input_size, num_layers=3, batch_first=True)
         self.unpool_1 = nn.Upsample(scale_factor=5, mode='bilinear')
-        self.deconv_1 = nn.ConvTranspose2d(in_channels=4, out_channels=3, kernel_size=200, stride=1)
+        self.deconv_1 = nn.ConvTranspose2d(in_channels=16, out_channels=3, kernel_size=200, stride=1)
+        self.sequence_len = sequence_len
+        self.input_size = input_size
 
     def forward(self, input_vec):
-        output = input_vec
-        output, (_, _) = self.lstm_1(output)  # input of shape (batch, seq_len, input_size)
-        output = output.view(8, 4, 5, 5)
+        #print(input_vec.shape)
+        output = torch.zeros_like(input_vec)
+
+        combo = None
+        for i in range(self.sequence_len):
+            
+            
+            output[:, i], combo = self.lstm_1(input_vec[:, i].view(1, 1, self.input_size), combo)  # input of shape (batch, seq_len, input_size)
+            #print("line")
+            #print("hidden ", i)
+            #print(combo[0])
+            #print("cell ",  i)
+            #print(combo[1])
+        
+
+
+        #print(output.detach().cpu())
+        output = output.view(self.sequence_len, 16, 5, 5)
         output = self.unpool_1(output)
         output = self.deconv_1(output)
 
@@ -29,42 +46,57 @@ class DecoderSingle(nn.Module):
 
 if __name__ == "__main__":
 
+    seq_length = 8
+    lr = 0.1
+
     # Check for cuda
     if torch.cuda.is_available():
         device = 'cuda'
     else:
         device = 'cpu'
 
-    model = DecoderSingle().to(device)
+    model = DecoderSingle(seq_length).to(device)
     criterion = F.mse_loss
     # criterion = F.binary_cross_entropy
-    optimizer = optim.SGD(model.parameters(), lr=.01, momentum=.2, weight_decay=0)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     tensor_1 = torch.ones(1, 1, 100)
-    tensor_1 = tensor_1.repeat(8, 1, 1)
+    tensor_1 = tensor_1.repeat(1, seq_length, 1).to(device)
 
     # Set values for DataSet object.
-    seq_length = 8
-    class_limit = 1  # Number of classes to extract. Can be 1-101 or None for all.
+    
+    class_limit = 101 # Number of classes to extract. Can be 1-101 or None for all.
     video_limit = 1  # Number of videos allowed per class.  None for no limit
     data = DataSet(seq_length=seq_length, class_limit=class_limit, video_limit=video_limit)
 
     video_array = None
+    i = 0
     for video in data.data:
         video_array = data.video_to_vid_array(video)  # Get numpy array of sequence
-        break  # Only need one video to begin with.
+        i += 1
+        #print (video_array)
+        if (i == 10):
+            break
+    
 
     data.vid_array_to_video("ground_truth", video_array)
 
     video_tensor = torch.from_numpy(video_array).type(torch.float32).to(device)
 
     model.train()
-    for index in range(200):
+    for index in range(10000):
+
+        if (index % 5000 == 0):
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.1
+            
+            print ("learning rate is now: ", param_group['lr'])
+
         optimizer.zero_grad()
 
         output = model.forward(tensor_1)
-        # print(video_tensor.dtype)
-        # print(output.dtype)
+        #print(video_tensor.shape)
+        #print(output.shape)
         loss = criterion(output, video_tensor)
         print("Step: {}, Loss: {}".format(index, loss))
         loss.backward()

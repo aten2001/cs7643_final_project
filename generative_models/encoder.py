@@ -8,7 +8,7 @@ import torch.nn as nn
 import numpy
 
 class Encoder(nn.Module):
-    def __init__(self, cnn_model, input_dim, hidden_dim, lstm_layers, embedding_dim):
+    def __init__(self, cnn_model, input_dim, hidden_dim, lstm_layers, embedding_dim, sequence_len):
         super(Encoder, self).__init__()
 
         # Convolutions (pre-trained)
@@ -37,8 +37,10 @@ class Encoder(nn.Module):
             batch_first=True       # input & output will has batch size as 1s dimension. e.g. (batch, time_step, input_size)
         )
 
+        self.sequence_len = sequence_len
+
         # Lock conv layers
-        self.cnn.eval()
+        #self.cnn.eval()
 
     def forward(self, x):
         """
@@ -54,7 +56,7 @@ class Encoder(nn.Module):
         hidden = None
 
         # Initialize initial hidden state
-        out, hidden = self.LSTM(embedding.view(1, 6, -1), hidden)
+        out, hidden = self.LSTM(embedding.view(1, self.sequence_len, -1), hidden)
             
         out = self.fc2(out)
         out = self.relu(out)

@@ -17,8 +17,8 @@ class EncoderDecoder(nn.Module):
         super(EncoderDecoder, self).__init__()
 
         #cnn_model, input_dim, hidden_dim, lstm_layers, embedding_dim
-        self.encoder = Encoder(cnn_model="vgg", input_dim=512, hidden_dim=256, lstm_layers=2, embedding_dim=256, sequence_len=seq_length)
-        self.decoder = DecoderSingle()
+        self.encoder = Encoder(cnn_model="vgg", input_dim=4096, hidden_dim=1024, lstm_layers=5, embedding_dim=400, sequence_len=seq_length)
+        self.decoder = DecoderSingle(400, seq_length)
 
     def forward(self, x):
         """
@@ -43,15 +43,19 @@ else:
 torch.manual_seed(sys.argv[1])
 
 # Set values for DataSet object.
-seq_length = 5
-class_limit = 1  # Number of classes to extract. Can be 1-101 or None for all.
+seq_length = 7
+class_limit = 101  # Number of classes to extract. Can be 1-101 or None for all.
 video_limit = 1  # Number of videos allowed per class.  None for no limit
 data = DataSet(seq_length=seq_length, class_limit=class_limit, video_limit=video_limit)
 
 video_array = None
+i = 0
 for video in data.data:
     video_array = data.video_to_vid_array(video)  # Get numpy array of sequence
-    break  # Only need one video to begin with.
+    i += 1
+    #print (video_array)
+    if (i == 92):
+        break
 
 data.vid_array_to_video("ground_truth", video_array)
 
@@ -60,19 +64,17 @@ video_tensor = torch.from_numpy(video_array).type(torch.float32).to(device)
 model = EncoderDecoder(seq_length).to(device)
 criterion = F.mse_loss
 # criterion = F.binary_cross_entropy
-optimizer = optim.Adam(model.parameters(), lr=.15, weight_decay=0)
+optimizer = optim.RMSprop(model.parameters(), lr=.01)
 # optimizer = optim.SGD(model.parameters(), lr=.01, momentum=.2, weight_decay=0)
 
 model.train()
-for index in range(1500):
+for index in range(250):
     optimizer.zero_grad()
 
     output = model.forward(video_tensor)
     # print(video_tensor.dtype)
     # print(output.dtype)
     loss = criterion(output, video_tensor)
-
-    print (output.shape)
 
     #frame_one = output[0].detach().numpy()
 
