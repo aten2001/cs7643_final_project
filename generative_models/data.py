@@ -33,7 +33,8 @@ def threadsafe_generator(func):
 
 class DataSet():
 
-    def __init__(self, seq_length=40, class_limit=None, video_limit=None, image_shape=(224, 224, 3), skip_rate=10):
+    def __init__(self, seq_length=40, class_limit=None, video_limit=None, image_shape=(224, 224, 3), skip_rate=10,
+                 class_list=None):
         """Constructor.
         seq_length = (int) the number of frames to consider
         class_limit = (int) number of classes to limit the data to.
@@ -47,6 +48,11 @@ class DataSet():
         # self.max_frames = 300  # max number of frames a video can have for us to use it
         self.image_shape = image_shape
         self.skip_rate = skip_rate
+        if class_list is None:
+            self.class_list = None
+        else:
+            self.class_list = []
+            [self.class_list.append(x) for x in class_list if x not in self.class_list]  # Remove any duplicate classes
         if video_limit is None:
             self.video_limit = np.Inf
         else:
@@ -70,6 +76,8 @@ class DataSet():
         with open(os.path.join('data', 'data_file.csv'), 'r') as fin:
             reader = csv.reader(fin)
             data = list(reader)
+        data.sort(key=lambda x: x[1], reverse=False)  # Sort in place by category
+        data.sort(key=lambda x: x[0], reverse=True)  # Sort in place by test/train
 
         return data
 
@@ -96,6 +104,12 @@ class DataSet():
 
         # Sort them.
         classes = sorted(classes)
+
+        if self.class_list is not None:
+            possible_classes = classes
+            classes = list()
+            # Add desired class to classes list if it is available.
+            [classes.append(x) for x in self.class_list if x in possible_classes]
 
         # Return.
         if self.class_limit is not None:
@@ -147,18 +161,18 @@ class DataSet():
         picture_array = np.transpose(picture_array, (1, 2, 0))  # Convert to H, W, C
         cv2.imwrite(filename, picture_array)
 
-    def get_class_one_hot(self, class_str):
-        """Given a class as a string, return its number in the classes
-        list. This lets us encode and one-hot it for training."""
-        # Encode it first.
-        label_encoded = self.classes.index(class_str)
-
-        # Now one-hot it.
-        label_hot = to_categorical(label_encoded, len(self.classes))
-
-        assert len(label_hot) == len(self.classes)
-
-        return label_hot
+    # def get_class_one_hot(self, class_str):
+    #     """Given a class as a string, return its number in the classes
+    #     list. This lets us encode and one-hot it for training."""
+    #     # Encode it first.
+    #     label_encoded = self.classes.index(class_str)
+    #
+    #     # Now one-hot it.
+    #     label_hot = to_categorical(label_encoded, len(self.classes))
+    #
+    #     assert len(label_hot) == len(self.classes)
+    #
+    #     return label_hot
 
     def split_train_test(self):
         """Split the data into train and test groups."""
