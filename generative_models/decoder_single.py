@@ -21,19 +21,21 @@ class DecoderSingle(nn.Module):
 
     def forward(self, input_vec):
         #print(input_vec.shape)
-        output = torch.zeros_like(input_vec)
+        output = input_vec
+        output, combo = self.lstm_1(output)  # input of shape (batch, seq_len, input_size)
 
+        """
+        # Below runs the LSTM cell by cell
+        output = torch.zeros_like(input_vec)  # For running the LSTM Cell by cell
         combo = None
         for i in range(self.sequence_len):
-            
-            
             output[:, i], combo = self.lstm_1(input_vec[:, i].view(1, 1, self.input_size), combo)  # input of shape (batch, seq_len, input_size)
-            #print("line")
-            #print("hidden ", i)
-            #print(combo[0])
-            #print("cell ",  i)
-            #print(combo[1])
-        
+            print("line")
+            print("hidden ", i)
+            print(combo[0])
+            print("cell ",  i)
+            print(combo[1])
+        """
 
 
         #print(output.detach().cpu())
