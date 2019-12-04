@@ -5,22 +5,24 @@ import torch.optim as optim
 import numpy as np
 from data import DataSet
 from encoder import Encoder
-from decoder import Decoder
+from decoder import Decoder01, Decoder02
+
 import sys
 
-class EncoderDecoder(nn.Module):
+
+class EncoderDecoder01(nn.Module):
     """
     Decoder for the auto-encoder/decoder network
     ref https://zo7.github.io/blog/2016/09/25/generating-faces.html
     """
     def __init__(self, batch_size, seq_len):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
-        super(EncoderDecoder, self).__init__()
+        super(EncoderDecoder01, self).__init__()
         embedding_dim = 400
         #cnn_model, input_dim, hidden_dim, lstm_layers, embedding_dim
         self.encoder = Encoder(cnn_model="vgg", input_dim=4096, hidden_dim=1024, lstm_layers=5,
                                embedding_dim=embedding_dim, batch_size=batch_size, sequence_len=seq_len)
-        self.decoder = Decoder(batch_size=batch_size, seq_len=seq_len, l_input_size=embedding_dim,
-                               l_hidden_size=400)
+        self.decoder = Decoder01(batch_size=batch_size, seq_len=seq_len, l_input_size=embedding_dim,
+                                 l_hidden_size=400)
 
     def forward(self, x):
         """
@@ -36,6 +38,34 @@ class EncoderDecoder(nn.Module):
         return output
 
 
+class EncoderDecoder02(nn.Module):
+    """
+    Decoder for the auto-encoder/decoder network
+    ref https://zo7.github.io/blog/2016/09/25/generating-faces.html
+    """
+    def __init__(self, batch_size, seq_len):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
+        super(EncoderDecoder02, self).__init__()
+        embedding_dim = 400
+        #cnn_model, input_dim, hidden_dim, lstm_layers, embedding_dim
+        self.encoder = Encoder(cnn_model="vgg", input_dim=5000, hidden_dim=5000, lstm_layers=2,
+                               embedding_dim=embedding_dim, batch_size=batch_size, sequence_len=seq_len)
+        decoder_lstm = 22 * 22 * 5 + 17 * 17 * 6 + 13 * 13 * 5
+        self.decoder = Decoder02(batch_size=batch_size, seq_len=seq_len, l_input_size=embedding_dim,
+                                 l_hidden_size=decoder_lstm, l_num_layers=2)
+
+    def forward(self, x):
+        """
+
+        :param x: (S,C,H,W)
+        :return:
+        """
+
+        working = self.encoder.forward(x)
+        # working = working[-1]
+        output = self.decoder.forward(working)
+
+        return output
+
 # Check for cuda
 if torch.cuda.is_available():
     device = 'cuda'
@@ -46,9 +76,9 @@ else:
 
 # Set values for DataSet object.
 batch_size = 2
-seq_length = 3
-class_limit = 101  # Number of classes to extract. Can be 1-101 or None for all.
-video_limit = 1  # Number of videos allowed per class.  None for no limit
+seq_length = 2
+class_limit = None  # Number of classes to extract. Can be 1-101 or None for all.
+video_limit = 2  # Number of videos allowed per class.  None for no limit
 data = DataSet(seq_length=seq_length, class_limit=class_limit, video_limit=video_limit)
 H, W, C = data.image_shape
 video_array = np.zeros((batch_size, seq_length, C, H, W))
@@ -72,14 +102,14 @@ for index in range(video_count):
 
 video_tensor = torch.from_numpy(video_array).type(torch.float32).to(device)
 
-model = EncoderDecoder(batch_size=batch_size, seq_len=seq_length).to(device)
+model = EncoderDecoder02(batch_size=batch_size, seq_len=seq_length).to(device)
 criterion = F.mse_loss
 # criterion = F.binary_cross_entropy
 optimizer = optim.RMSprop(model.parameters(), lr=.01)
 # optimizer = optim.SGD(model.parameters(), lr=.01, momentum=.2, weight_decay=0)
 
 model.train()
-for index in range(500):
+for index in range(1000):
     optimizer.zero_grad()
 
     output = model.forward(video_tensor)

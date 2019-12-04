@@ -6,7 +6,7 @@ import numpy as np
 from data import DataSet
 
 
-class Decoder(nn.Module):
+class Decoder01(nn.Module):
     """
     Decoder for the auto-encoder/decoder network
     ref https://zo7.github.io/blog/2016/09/25/generating-faces.html
@@ -14,7 +14,7 @@ class Decoder(nn.Module):
 
     def __init__(self, batch_size, seq_len, l_input_size=25, l_hidden_size=25,
                  l_num_layers=1):  # , input_dim, hidden_dim, num_layers, linear_out, de_conv_stuff, batch_size):
-        super(Decoder, self).__init__()
+        super(Decoder01, self).__init__()
         self.batch_size = batch_size
         self.sequence_len = seq_len
         self.deconv_1_in = 16
@@ -51,6 +51,72 @@ class Decoder(nn.Module):
 
         return out
 
+class Decoder02(nn.Module):
+    """
+    Decoder for the auto-encoder/decoder network
+    ref https://zo7.github.io/blog/2016/09/25/generating-faces.html
+    """
+
+    def __init__(self, batch_size, seq_len, l_input_size=5000, l_hidden_size=5000, l_num_layers=3):
+        super(Decoder02, self).__init__()
+        self.batch_size = batch_size
+        self.sequence_len = seq_len
+        self.deconv_l1_in = 5  # Channels for large deconv
+        self.deconv_l1_out = 3  # Channels for large deconv
+        self.deconv_m1_in = 6
+        self.deconv_m1_out = 3
+        self.deconv_s1_in = 5
+        self.deconv_s1_out = 3
+        self.lstm_1 = nn.LSTM(input_size=l_input_size, hidden_size=l_hidden_size, num_layers=l_num_layers,
+                              batch_first=True)
+        self.unpool_l1 = nn.Upsample(scale_factor=3, mode='bilinear')
+        self.deconv_l1 = nn.ConvTranspose2d(in_channels=self.deconv_l1_in, out_channels=self.deconv_l1_out, kernel_size=190, stride=1)
+        self.unpool_m1 = nn.Upsample(scale_factor=10, mode='bilinear')
+        self.deconv_m1 = nn.ConvTranspose2d(in_channels=self.deconv_m1_in, out_channels=self.deconv_m1_out, kernel_size=59,
+                                            stride=1)
+        self.unpool_s1 = nn.Upsample(scale_factor=5, mode='bilinear')
+        self.deconv_s1 = nn.ConvTranspose2d(in_channels=self.deconv_s1_in, out_channels=self.deconv_s1_out, kernel_size=10,
+                                            stride=2)
+        conv_in = self.deconv_l1_out + self.deconv_m1_out + self.deconv_s1_out
+        self.conv = nn.Conv2d(in_channels=conv_in, out_channels=3, kernel_size=5)
+
+        # TODO: Consider dropout
+
+    def forward(self, input_vec):
+        # print(input_vec.shape)
+
+        out_lstm, _ = self.lstm_1(input_vec)  # input of shape (batch, seq_len, input_size)
+        # print(out.detach().cpu())
+        l_m_break = 5 * 169
+        m_s_break = 6 * 289 + l_m_break
+        input_large = out_lstm[:, :, :l_m_break]
+        input_med = out_lstm[:, :, l_m_break:m_s_break]
+        input_small = out_lstm[:, :, m_s_break:]
+
+        # Large
+        out_l = input_large.reshape(self.batch_size * self.sequence_len, self.deconv_l1_in, 13, 13)  # .view didn't work
+        out_l = self.unpool_l1(out_l)
+        out_l = self.deconv_l1(out_l)
+        # out_l = out_l.view(self.batch_size, self.sequence_len, self.deconv_l1_out, 228, 228)
+
+        # Medium
+        out_m = input_med.reshape(self.batch_size * self.sequence_len, self.deconv_m1_in, 17, 17)  # .view didn't work
+        out_m = self.unpool_m1(out_m)
+        out_m = self.deconv_m1(out_m)
+        # out_m = out_m.view(self.batch_size, self.sequence_len, self.deconv_m1_out, 228, 228)
+
+        # Small
+        out_s = input_small.reshape(self.batch_size * self.sequence_len, self.deconv_s1_in, 22, 22)  # .view didn't work
+        out_s = self.unpool_s1(out_s)
+        out_s = self.deconv_s1(out_s)
+        # out_s = out_s.view(self.batch_size, self.sequence_len, self.deconv_m1_out, 228, 228)
+
+        in_conv = torch.cat((out_l, out_m, out_s), dim=1)
+        out = self.conv(in_conv)
+        out = out.reshape(self.batch_size, self.sequence_len, 3, 224, 224)
+
+
+        return out
 
 if __name__ == "__main__":
 
@@ -63,7 +129,7 @@ if __name__ == "__main__":
     else:
         device = 'cpu'
 
-    model = Decoder(seq_length).to(device)
+    model = Decoder01(seq_length).to(device)
     criterion = F.mse_loss
     # criterion = F.binary_cross_entropy
     optimizer = optim.Adam(model.parameters(), lr=lr)
